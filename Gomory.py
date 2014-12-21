@@ -33,7 +33,6 @@ import datetime
 
 
 
-#contentList=['span','a','li','div','p','h1','h2','h3','h4','h5','em','td','th','table', 'ul', 'center','img','input']
 contentList=['div','table', 'ul','ol']
 toBeIgnoredList=['script','noscript','style','area','head','meta','frame','frameset','br','hr']
 segment_tags = { "head", "table", "center", "body", "section", "ul", "li"}
@@ -61,7 +60,8 @@ try :
     
    #gettting the dimensions of webpage
     pageDim=driver.execute_script(VIEWPORT_SCRIPT)
-    print "Page Dimension : ", pageDim
+    current_directory=os.getcwd()
+    
     
 #--------------------------------ROUND 1 : getting initial nodes-------------------------------
     print "ROUND 1 : getting initial nodes . . . . "
@@ -72,7 +72,7 @@ try :
     #Getting all text nodes and filter those vertices having no width & height
     print "Getting all text nodes , filter duplicate parent nodes and filter those vertices having no width & height . . . . "
     text_nodes=driver.execute_script(JS_SCRIPT_GET_TEXT_NODES, "//*")
-    #print "text length : ",len(text_nodes)
+    
     for i in text_nodes:
       if i.is_displayed and i.tag_name not in toBeIgnoredList and  not(i.size['width']<1 or i.size['height']<1) and (i.size['width']*i.size['height']>=50):
 	p = i.find_element_by_xpath('..')
@@ -88,22 +88,22 @@ try :
 	  dr.rectangle(((i.location["x"],i.location["y"]),(i.location["x"]+i.size["width"],i.location["y"]+i.size["height"])), outline = "blue")
     print "Getting all Images . . . . "
     list_links = driver.find_elements_by_tag_name('img')
-    #print "Image length : ",len(list_links)
+    
     for i in list_links:
       if i.is_displayed and i not in initialNodes and  not(i.size['width']<1 or i.size['height']<1) and (i.size['width']*i.size['height']>=50):
 	  initialNodes.add(i)
 	  dr.rectangle(((i.location["x"],i.location["y"]),(i.location["x"]+i.size["width"],i.location["y"]+i.size["height"])), outline = "blue")
     print "Getting all Inputs . . . . "
-    #print "Input length : ",len(list_links)
+    
     list_links = driver.find_elements_by_tag_name('input')
     for i in list_links:
        if i.is_displayed and i not in initialNodes and  not(i.size['width']<1 or i.size['height']<1)and (i.size['width']*i.size['height']>=50):
 	  initialNodes.add(i)
 	  dr.rectangle(((i.location["x"],i.location["y"]),(i.location["x"]+i.size["width"],i.location["y"]+i.size["height"])), outline = "blue")
    
-    #print "InitialNOde length : ",len(initialNodes)
+    
     #Save the plotted image initially  
-    im.save("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 1_VertexSelected_"+t+".png", "PNG")
+    im.save(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 1_VertexSelected_"+t+".png", "PNG")
     print "Round 1 done . . . . " 
     
     #Store the filtered node information varID,tagPath,outerHTML,height,width,x,y,webElement,left,top,right,bottom
@@ -132,40 +132,30 @@ try :
     im = Image.new('RGB', (pageDim['x']+100,pageDim['y']+100), (255,255,255))
     dr = ImageDraw.Draw(im)
     #Filter smaller boxes
-    print "Filter smaller boxes start"
     initialnodes=Set(mynodes)
     for x1 in initialnodes : 
-      print "merge smaller boxes start"
       for x2 in initialnodes :
 	if x2!=x1 :
 	  if (x1.x<x2.x) and (x1.x+x1.width>x2.x+x2.width) and (x1.y<x2.y) and (x1.y+x1.height>x2.y+x2.height) :
 	    toBeRemoved.add(x2)
-	    #initialnodes.remove(x2)
-	    print "merge smaller boxes done"
-	  #elif not (((x1.location['x']>x2.location['x']+x2.size['width']) or (x2.location['x']>x1.location['x']+x1.size['width'])) or ((x1.location['y']<x2.location['y']+x2.size['height']) or (x2.location['y']<x1.location['y']+x1.size['height']))) :
+	    
 	  elif (x1.x<x2.x+x2.width) and (x1.x+x1.width>x2.x) and (x1.y<x2.y+x2.height) and (x1.y+x1.height>x2.y) :
-	    print "merge overlapping boxes start"
+	    
 	    if (x1.height*x1.width) > (x2.height*x2.width) :
 	      toBeRemoved.add(x2)
-	      #initialnodes.remove(x2)
 	    else :
 	      toBeRemoved.add(x1)
-	      #initialnodes.remove(x1)
-	    print "merge overlapping boxes done"
+	    
+	    
     print "Vertices filtered . . . . "    
-    #print "InitialNOde length : ",len(initialNodes)
-    #print "toBeRemoved length : ",len(toBeRemoved)
-    #initialNodes.difference_update(toBeRemoved)
     
       
     #Store the filtered node information
     #draw merged nodes
     print "Store the filtered node information as VertexObject . . . . "
-    #initialNodes=Set(initialnodes)
     initialnodes.difference_update(toBeRemoved)
     for i in initialnodes :
       nodeInfo=driver.execute_script(GET_PARENTS,i.webElement)
-      #print nodeInfo
       left={}
       right={}
       top={}
@@ -174,9 +164,8 @@ try :
       node = VertexObject(verID,jsonobject[0]['tagPath'],jsonobject[0]['outerHTML'],i.height,i.width,i.x,i.y,i.webElement,left,top,right,bottom)
       verID=verID+1
       myNodes.append(node)
-      #print i.location["x"]," : ",i.location["y"]," : ",i.size["width"]," : ",i.size["height"]," : ",jsonobject[0]['tagPath']
       dr.rectangle(((i.x,i.y),(i.x+i.width,i.y+i.height)), outline = "blue")
-    im.save("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 2_VertexFiltered_"+t+".png", "PNG")       
+    im.save(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 2_VertexFiltered_"+t+".png", "PNG")       
     print "Round 2 done . . . . " 
     
     im = Image.new('RGB', (pageDim['x']+100,pageDim['y']+100), (255,255,255))
@@ -257,12 +246,12 @@ try :
 	for m in min_keys :
 	  l[m]=min_value
 	x1.setBottom(l)
-    #print "printing left right top bottom neighbors"
+    
     print "Calculating Path Similarity between each neighbors to assign weights . . . . "
     for i in myNodes :
-      #print "left"
+      
       if i.left :
-	#print i.webElement , "--->",i.left.items()
+	
 	for key in i.left :
 	  if(len(i.tagPath)>len(key.tagPath)) :
 	    m=len(i.tagPath)
@@ -271,9 +260,9 @@ try :
 	  w=1-(float(Levenshtein.distance(i.tagPath,key.tagPath))/float(m))
 	  g.add_edge(i.varID,key.varID,weight = w)
 	  dr.line((i.x,i.y+i.height/2, key.x+key.width, key.y+key.height/2), fill="orange")
-      #print "right"
+      
       if i.right :
-	#print i.webElement , "--->",i.right.items()
+	
 	for key in i.right :
 	  if(len(i.tagPath)>len(key.tagPath)) :
 	    m=len(i.tagPath)
@@ -283,9 +272,9 @@ try :
 	  g.add_edge(i.varID,key.varID,weight = w)
 	  dr.line((i.x+i.width,i.y+i.height/2+2, key.x, key.y+key.height/2+2), fill="red")
      
-      #print "top"
+      
       if i.top :
-	#print i.webElement , "--->",i.top.items()
+	
 	for key in i.top :
 	  if(len(i.tagPath)>len(key.tagPath)) :
 	    m=len(i.tagPath)
@@ -295,26 +284,25 @@ try :
 	  g.add_edge(i.varID,key.varID,weight = w)
 	  dr.line((i.x+i.width/2,i.y, key.x+key.width/2, key.y+key.height), fill="green")
      
-      #print "bottom"
+      
       if i.bottom :
-	#print i.webElement , "--->",i.bottom.items()
+	
 	for key in i.bottom :
 	  w=1-(float(Levenshtein.distance(i.tagPath,key.tagPath))/float(m))
 	  g.add_edge(i.varID,key.varID,weight = w)
 	  dr.line((i.x+i.width/2+2,i.y+i.height, key.x+key.width/2+2, key.y), fill="black")
      
-      #print
-      #print
-    g.write_svg("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_UnpartitionedGraph_"+t+".svg", layout=g.layout_kamada_kawai())
+      
+    g.write_svg(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_UnpartitionedGraph_"+t+".svg", layout=g.layout_kamada_kawai())
     #Save the plotted image initially  
-    im.save("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_EdgeAdded_"+t+".png", "PNG")
+    im.save(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_EdgeAdded_"+t+".png", "PNG")
      
     print "Round 3 end : ---> graph creation and adding weights to edges "
     print "Round 4 start : ---> Gomory Hu Based Graph Clustering "
     print "Unpartitioned Graph : ",g
     print g.es["weight"]
     gh =g.gomory_hu_tree(capacity="weight")
-    gh.write_svg("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_Gomory-Hu-Tree_"+t+".svg", layout=g.layout_kamada_kawai())
+    gh.write_svg(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_Round : 3_Gomory-Hu-Tree_"+t+".svg", layout=g.layout_kamada_kawai())
     eh=gh.get_edgelist()
     print "Gomory Hu Tree : ",gh
     print gh.es["flow"]
@@ -325,7 +313,7 @@ try :
     other=Set()
     for ehh in eh :
       hh=g.es.select(_between=([ehh[0]],[ehh[1]]))
-      print "Edge from ",ehh[0]," --> ",ehh[1], "weights : ",hh["weight"]
+      
       if 1.0 in hh["weight"] :
 	if int(ehh[0]) in other :
 	  for k in cluster :
@@ -344,14 +332,12 @@ try :
 	  cluster.append(temp)
 	  other.add(int(ehh[0]))
 	  other.add(int(ehh[1]))
-    '''for i in other :
-      print i'''
     mySet=Set()
     for m in myNodes :
       mySet.add(int(m.varID))
-    #print mySet
+    
     mySet1=mySet.difference(other)
-    #print mySet1
+    
     for k in mySet1 :
       temp=[]
       temp.append(k)
@@ -361,12 +347,9 @@ try :
       a=a+1
       for k in key :
 	g.vs[k]['VertexObject'].clusterID=str(a)
-	print "Cluster : ",g.vs[k]['VertexObject'].clusterID,"----","Vertex : ", g.vs[k]['VertexObject'].varID,"---->",g.vs[k]['VertexObject'].outerHTML
+
 	print
 	print
-    '''for i in range(0,len(myNodes)) :
-      print g.vs[i]['VertexObject'].varID,"---->",g.vs[i]['VertexObject'].outerHTML
-      print'''
     print "Round 4 end . . . . " 
     im = Image.new('RGB', (pageDim['x']+100,pageDim['y']+100), (255,255,255))
     dr = ImageDraw.Draw(im)  
@@ -397,11 +380,11 @@ try :
 	y.append(int(g.vs[k]['VertexObject'].y+g.vs[k]['VertexObject'].height))
 
       dr.rectangle(((min(x),min(y)),(max(x),max(y))), outline = "red")
-    print lxml.etree.tostring(root, pretty_print=True)
-    outFile = open("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/segmented_webpage.xml", 'w')
+   
+    outFile = open(current_directory+"/Output/GOMORY/segmented_webpage.xml", 'w')
     doc.write(outFile, xml_declaration=True, encoding='utf-16') 
     #Save the plotted image initially  
-    im.save("/home/anasua/WebContentExtraction/Architecture/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_ClusteredVertices_"+t+".png", "PNG")
+    im.save(current_directory+"/Output/GOMORY/"+str(webURL.split('//')[1]).replace('/','_')+"_ClusteredVertices_"+t+".png", "PNG")
     
 
    
